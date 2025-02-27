@@ -34,16 +34,34 @@ def seleccionar_mejor_servidor(servidores, w1, w2, w3, w4):
     """Selecciona el servidor con mayor utilidad esperada"""
     return max(servidores, key=lambda s: s.calcular_utilidad(w1, w2, w3, w4))
 
-def generar_servidores(n):
-    """Genera una lista de n servidores con valores aleatorios"""
+def generar_valor_con_distribucion(distribucion, **kwargs):
+    """Genera un valor basado en la distribución seleccionada"""
+    if distribucion == "uniform":
+        return random.uniform(0, 1)
+    elif distribucion == "normal":
+        mu = kwargs.get("mu", 0.5)
+        sigma = kwargs.get("sigma", 0.15)
+        return max(0, min(1, random.gauss(mu, sigma)))  # Recorte entre 0 y 1
+    elif distribucion == "exponential":
+        lambda_ = kwargs.get("lambda_", 1.5)
+        return min(1, random.expovariate(lambda_))
+    elif distribucion == "beta":
+        alpha = kwargs.get("alpha", 2)
+        beta = kwargs.get("beta", 5)
+        return random.betavariate(alpha, beta)
+    else:
+        raise ValueError(f"Distribución '{distribucion}' no reconocida.")
+
+def generar_servidores(n, distribucion="exponential"):
+    """Genera una lista de n servidores con valores aleatorios según una distribución"""
     return [
         Server(
             id=i+1,
-            carga=random.uniform(0, 1),
-            latencia=random.uniform(0, 1),
+            carga=generar_valor_con_distribucion(distribucion),
+            latencia=generar_valor_con_distribucion(distribucion),
             disponibilidad=random.choice([0, 1]),
-            costo_migracion=random.uniform(0, 1),
-            riesgo=random.uniform(-1, 1) 
+            costo_migracion=generar_valor_con_distribucion(distribucion),
+            riesgo=random.uniform(-1, 1)  # Siempre de -1 a 1
         )
         for i in range(n)
     ]
@@ -80,6 +98,42 @@ def visualizar_resultados(resultados):
         plt.xticks(list(conteo.keys()))
         plt.show()
 
+def generar_diagrama_decision():
+    """Genera un diagrama de decisión visual"""
+    G = nx.DiGraph()
+
+    # Agregar nodos de decisión
+    G.add_node("Inicio")
+    for i in range(1, 4):
+        G.add_node(f"Servidor {i}")
+        G.add_edge("Inicio", f"Servidor {i}", label=f"Opción {i}")
+    
+    # Agregar nodos de utilidad
+    G.add_node("Decisión final")
+    for i in range(1, 4):
+        G.add_edge(f"Servidor {i}", "Decisión final", label="Evalúa Utilidad")
+    
+    # Dibujar el grafo
+    plt.figure(figsize=(8, 5))
+    pos = nx.spring_layout(G)
+    nx.draw(G, pos, with_labels=True, node_size=3000, node_color='lightblue', font_size=10, edge_color='gray')
+    edge_labels = {(i, j): G.edges[i, j]['label'] for i, j in G.edges}
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
+    plt.title("Diagrama de Decisión para Selección de Servidores")
+    plt.show()
+
+def tomar_decisiones_secuenciales(n_pasos, n_servidores, w1, w2, w3, w4):
+    """Simula un MDP donde los servidores ajustan su carga en cada iteración"""
+    servidores = generar_servidores(n_servidores)
+
+    for paso in range(n_pasos):
+        mejor = seleccionar_mejor_servidor(servidores, w1, w2, w3, w4)
+        print(f"Iteración {paso+1}: Servidor seleccionado -> {mejor.id}")
+
+        # Simulación de ajuste de carga en servidores
+        for server in servidores:
+            server.carga = min(1, server.carga + random.uniform(-0.2, 0.2))  # Simula cambio de carga
+
 def main():
     # Leer archivo de entrada
     with open("input.json", "r") as file:
@@ -94,6 +148,15 @@ def main():
     
     # Visualizar resultados
     visualizar_resultados(resultados)
+
+    # Generar diagrama de decisión
+    generar_diagrama_decision()
+
+    # Simular decisiones secuenciales (MDP)
+    print("\n--- Simulación de Decisiones Secuenciales ---")
+    for escenario in config["escenarios"]:
+        print(f"\nEscenario: {escenario['nombre']}")
+        tomar_decisiones_secuenciales(5, config["n_servidores"], *escenario["pesos"])
 
 if __name__ == "__main__":
     main()
