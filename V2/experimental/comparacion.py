@@ -2,6 +2,7 @@ import json
 import matplotlib.pyplot as plt
 from collections import Counter
 import os
+from mainComparacion import generar_servidores, seleccionar_mejor_servidor
 script_dir = os.path.dirname(os.path.abspath(__file__))
 input_path = os.path.join(script_dir, "input.json")
 
@@ -117,10 +118,6 @@ if __name__ == "__main__":
     # Leer configuración de input.json
     with open(input_path, "r") as file:
         config = json.load(file)  # ✅ Convertimos la cadena JSON en un diccionario de Python
-
-    
-    # Importar la función original de mainMejorado.py
-    from mainMejorado import generar_servidores, seleccionar_mejor_servidor
 
     # Generar servidores
     servidores = generar_servidores(config["n_servidores"])
