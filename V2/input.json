@@ -5,7 +5,8 @@
         {
             "nombre": "Balanceado",
             "pesos": [0.4, 0.2, 0.3, 0.1]
-        },
+        }
+        ,
         {
             "nombre": "Baja Latencia",
             "pesos": [0.2, 0.1, 0.6, 0.1]
