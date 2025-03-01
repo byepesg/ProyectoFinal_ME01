@@ -37,13 +37,13 @@ def seleccionar_mejor_servidor(servidores, w1, w2, w3, w4):
 def generar_valor_con_distribucion(distribucion, **kwargs):
     """Genera un valor basado en la distribución seleccionada"""
     if distribucion == "uniform":
-        return random.uniform(0, 1)
+        return random.uniform(0.2, 0.8)
     elif distribucion == "normal":
-        mu = kwargs.get("mu", 0.5)
+        mu = kwargs.get("mu", 0.10)
         sigma = kwargs.get("sigma", 0.15)
         return max(0, min(1, random.gauss(mu, sigma)))  # Recorte entre 0 y 1
     elif distribucion == "exponential":
-        lambda_ = kwargs.get("lambda_", 1.5)
+        lambda_ = kwargs.get("lambda_", 0.8)
         return min(1, random.expovariate(lambda_))
     elif distribucion == "beta":
         alpha = kwargs.get("alpha", 2)
@@ -52,7 +52,7 @@ def generar_valor_con_distribucion(distribucion, **kwargs):
     else:
         raise ValueError(f"Distribución '{distribucion}' no reconocida.")
 
-def generar_servidores(n, distribucion="exponential"):
+def generar_servidores(n, distribucion="beta"):
     """Genera una lista de n servidores con valores aleatorios según una distribución"""
     return [
         Server(
