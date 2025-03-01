@@ -1,0 +1,18 @@
+{
+    "iteraciones": 3000,
+    "n_servidores": 10,
+    "escenarios": [
+        {
+            "nombre": "Balanceado",
+            "pesos": [0.3, 0.2, 0.2, 0.2, 0.1]
+        },
+        {
+            "nombre": "Baja Latencia",
+            "pesos": [0.2, 0.1, 0.5, 0.1, 0.1]
+        },
+        {
+            "nombre": "Alta Disponibilidad",
+            "pesos": [0.3, 0.1, 0.1, 0.4, 0.1]
+        }
+    ]
+}
