@@ -6,10 +6,17 @@ from collections import Counter
 import os
 import io
 import sys
-
+import numpy as np
+import random 
 script_dir = os.path.dirname(os.path.abspath(__file__))
-input_path = os.path.join(script_dir, "input.json")
+input_path = os.path.join("F:\\ProyectoEstoc", "input.json")
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+json_path = os.path.join("F:\\ProyectoEstoc", "output_comparacion.json")
+
+# Cargar datos desde el JSON
+def cargar_datos(json_path):
+    with open(json_path, "r", encoding="utf-8") as file:
+        return json.load(file)
 
 class Server:
     """Clase que representa un servidor con sus características clave"""
@@ -24,29 +31,58 @@ class Server:
         self.costo_energia = costo_energia  
         self.tolerancia_fallos = tolerancia_fallos  
 
+    def generar_escenarios_aleatorios(n):
+        """Genera escenarios con pesos distribuidos de manera equitativa"""
+        nombres = ["Balanceado", "Baja Latencia", "Alta Disponibilidad", "Costo Energético Bajo", "Alta Tolerancia a Fallos"]
+        escenarios = []
+        
+        for nombre in nombres[:n]:
+            num_pesos = 6  # Asegurar que siempre haya 6 pesos
+            pesos = np.random.dirichlet(np.ones(num_pesos), size=1)[0].tolist()  # Suman 1.0
+            escenarios.append({"nombre": nombre, "pesos": pesos})
+        
+        return escenarios
+
+
     def calcular_utilidad(self, *pesos):
-        """Calcula la función de utilidad considerando costo energético y tolerancia a fallos"""
+        """Calcula la función de utilidad con mejor normalización y balance"""
         if len(pesos) < 4:
             raise ValueError("Se requieren al menos 4 pesos para calcular la utilidad.")
-        
-        # Asignar pesos a las variables correspondientes
+
+        # Asignar pesos
         w1, w2, w3, w4 = pesos[:4]
-        w5 = pesos[4] if len(pesos) > 4 else 0.1  # Valor predeterminado para w5
-        w6 = pesos[5] if len(pesos) > 5 else 0.1  # Valor predeterminado para w6
+        w5 = pesos[4] if len(pesos) > 4 else 0.15  # Reducimos el impacto de energía
+        w6 = pesos[5] if len(pesos) > 5 else 0.15  # Reducimos el impacto de fallos
 
-        utilidad_base = (w1 * (1 - self.carga) +
-                        w2 * (1 - self.costo_migracion) +
-                        w3 * (1 - self.latencia) +
-                        w4 * self.disponibilidad +
-                        w5 * (1 - self.costo_energia) +
-                        w6 * self.tolerancia_fallos)
+        # Aplicamos normalización con valores más justos
+        carga_norm = (self.carga - 0.3) / 0.4  
+        latencia_norm = (self.latencia - 0.3) / 0.4
+        disponibilidad_norm = (self.disponibilidad - 0.7) / 0.3
+        costo_migracion_norm = (self.costo_migracion - 0.3) / 0.4
+        costo_energia_norm = (self.costo_energia - 0.3) / 0.4
+        tolerancia_fallos_norm = (self.tolerancia_fallos - 0.5) / 0.4  
 
-        if self.riesgo > 0:  
-            return utilidad_base + (self.riesgo * random.uniform(0, 0.1))
-        elif self.riesgo < 0:  
-            return utilidad_base - (abs(self.riesgo) * random.uniform(0, 0.1))
-        else:
-            return utilidad_base
+        # Nueva forma de calcular utilidad con menos peso en latencia y disponibilidad
+        utilidad_base = (
+            w1 * (1 - carga_norm) +
+            w2 * (1 - costo_migracion_norm) +
+            w3 * (0.5 - latencia_norm) +  # Hacemos que la latencia no influya tanto
+            w4 * (0.5 + disponibilidad_norm) +  # Reducimos el impacto de disponibilidad
+            w5 * (0.5 - costo_energia_norm) +
+            w6 * (0.5 + tolerancia_fallos_norm)
+        )
+
+        # Penalización por riesgo ajustada para evitar sesgos
+        if self.riesgo > 0:
+            utilidad_base *= (1 - self.riesgo * 0.05)  # Menos impacto negativo
+        elif self.riesgo < 0:
+            utilidad_base *= (1 + abs(self.riesgo) * 0.05)
+
+        return utilidad_base
+
+
+
+
 def ajustar_pesos_dinamicamente(servidores):
     """Ajusta los pesos según la carga promedio y latencia"""
     carga_promedio = sum(s.carga for s in servidores) / len(servidores)
@@ -70,26 +106,56 @@ def ajustar_pesos_dinamicamente(servidores):
     suma_pesos = w_carga + w_migracion + w_latencia + w_disponibilidad
     return [w_carga / suma_pesos, w_migracion / suma_pesos, w_latencia / suma_pesos, w_disponibilidad / suma_pesos]
 
-def seleccionar_mejor_servidor(servidores):
-    """Selecciona el servidor con mayor utilidad esperada usando pesos dinámicos"""
-    pesos_dinamicos = ajustar_pesos_dinamicamente(servidores)
-    return max(servidores, key=lambda s: s.calcular_utilidad(*pesos_dinamicos))
 
-def generar_servidores(n, distribucion="beta"):
-    """Genera una lista de servidores con valores balanceados"""
-    return [
-        Server(
+def generar_servidores(n):
+    """Genera servidores con atributos más balanceados"""
+    servidores = []
+    valores = np.linspace(0.3, 0.7, n)  # Distribuye valores equitativamente
+
+    for i in range(n):
+        random.shuffle(valores)  # Mezcla valores para evitar patrones repetitivos
+        servidores.append(Server(
             id=i+1,
-            carga=random.uniform(0.2, 0.8),
-            latencia=random.uniform(0.2, 0.8),
+            carga=valores[i],
+            latencia=valores[-(i+1)],
             disponibilidad=random.uniform(0.7, 1.0),
-            costo_migracion=random.uniform(0.2, 0.8),
-            riesgo=random.uniform(-0.5, 0.5),
-            costo_energia=random.uniform(0.2, 0.8),
-            tolerancia_fallos=random.uniform(0.5, 1.0)
-        )
-        for i in range(n)
-    ]
+            costo_migracion=valores[i],
+            riesgo=random.uniform(-0.2, 0.2),  # Reducimos la variación de riesgo
+            costo_energia=valores[-(i+1)],
+            tolerancia_fallos=random.uniform(0.5, 0.9)
+        ))
+
+    return servidores
+
+def analizar_utilidad_servidores(servidores, pesos):
+    """Imprime la utilidad calculada de cada servidor en una iteración"""
+    print("\n📊 Análisis de utilidad por servidor:")
+    for s in servidores:
+        utilidad = s.calcular_utilidad(*pesos)
+        print(f"Servidor {s.id} -> Utilidad: {utilidad:.4f}")
+servidores = generar_servidores(10)
+pesos = ajustar_pesos_dinamicamente(servidores)
+
+print(f"\n🔍 Pesos aplicados: {pesos}")
+
+
+
+def seleccionar_mejor_servidor(servidores):
+    """Selecciona el mejor servidor con más aleatoriedad entre los Top 5"""
+    pesos_dinamicos = ajustar_pesos_dinamicamente(servidores)
+    utilidades = [(s.id, s.calcular_utilidad(*pesos_dinamicos)) for s in servidores]
+
+    # Ordenar servidores por utilidad de mayor a menor
+    utilidades.sort(key=lambda x: x[1], reverse=True)
+
+    # Elegir aleatoriamente entre los 5 mejores (más variabilidad)
+    top_5 = utilidades[:5]
+    mejor_servidor = random.choice(top_5)
+
+    print(f"🔹 Servidores Top 5: {top_5}")  # Para ver si el sesgo desaparece
+
+    return next(s for s in servidores if s.id == mejor_servidor[0])
+
 
 def simular_escenarios(config):
     """Ejecuta simulaciones para múltiples escenarios y guarda resultados"""
@@ -202,6 +268,7 @@ def visualizar_comparacion(resultados):
     
     for metodo, datos in resultados.items():
         plt.figure(figsize=(8, 5))
+        colores = plt.cm.tab10(np.linspace(0, 1, len(datos)))  # Genera una lista de colores distintos
 
         for escenario, conteo in datos.items():
             if not isinstance(conteo, dict):  
@@ -216,33 +283,98 @@ def visualizar_comparacion(resultados):
         plt.xticks(rotation=45)
         plt.legend()
         plt.show()
-
-def main():
-    """Ejecución del programa principal"""
-    with open(input_path, "r") as file:
-        config = json.load(file)
+# Función para graficar los datos extraídos del JSON
+def graficar_resultados(resultados):
+    # Extraer los escenarios de utilidad
+    escenarios = resultados.get("Utilidad", {}).keys()
     
-    # Generar servidores
-    servidores = generar_servidores(config["n_servidores"])
+    # Gráfico de barras agrupadas con todos los métodos
+    plt.figure(figsize=(10, 6))
+    servidores = set()
+    utilidad_escenarios = {}
+    
+    for escenario in escenarios:
+        utilidad_data = resultados["Utilidad"].get(escenario, {})
+        utilidad_escenarios[escenario] = utilidad_data
+        servidores.update(map(int, utilidad_data.keys()))
+    
+    round_robin_data = resultados["Round-Robin"].get("General", {})
+    least_connections_data = resultados["Least Connections"].get("General", {})
+    servidores.update(map(int, round_robin_data.keys()))
+    servidores.update(map(int, least_connections_data.keys()))
+    servidores = sorted(servidores)
+    
+    x = np.arange(len(servidores))
+    width = 0.25  # Ancho de las barras
+    
+    # Construcción de datos para graficar
+    for i, escenario in enumerate(escenarios):
+        utilidad_valores = [utilidad_escenarios[escenario].get(str(s), 0) for s in servidores]
+        plt.bar(x - width + (i * width / len(escenarios)), utilidad_valores, width / len(escenarios), label=f"{escenario}", alpha=0.7)
+    
+    round_robin_valores = [round_robin_data.get(str(s), 0) for s in servidores]
+    least_connections_valores = [least_connections_data.get(str(s), 0) for s in servidores]
+    
+    plt.bar(x, round_robin_valores, width, label="Round-Robin", color='red', alpha=0.7)
+    plt.bar(x + width, least_connections_valores, width, label="Least Connections", color='green', alpha=0.7)
+    
+    # Configuración del gráfico
+    plt.xlabel("ID del Servidor")
+    plt.ylabel("Frecuencia de Selección")
+    plt.title("Comparación de Algoritmos - General")
+    plt.xticks(x, servidores)
+    plt.legend()
+    plt.grid(axis='y', linestyle='--', alpha=0.6)
+    
+    # Mostrar gráfico agrupado
+    plt.show()
+    
+    # Gráficos individuales por escenario
+    for escenario in escenarios:
+        plt.figure(figsize=(10, 6))
+        
+        utilidad_data = resultados["Utilidad"].get(escenario, {})
+        utilidad_valores = [utilidad_data.get(str(s), 0) for s in servidores]
+        
+        plt.bar(x - width, utilidad_valores, width, label="Utilidad", color='blue', alpha=0.7)
+        plt.bar(x, round_robin_valores, width, label="Round-Robin", color='red', alpha=0.7)
+        plt.bar(x + width, least_connections_valores, width, label="Least Connections", color='green', alpha=0.7)
+        
+        # Configuración del gráfico
+        plt.xlabel("ID del Servidor")
+        plt.ylabel("Frecuencia de Selección")
+        plt.title(f"Comparación de Algoritmos - {escenario}")
+        plt.xticks(x, servidores)
+        plt.legend()
+        plt.grid(axis='y', linestyle='--', alpha=0.6)
+        
+        # Mostrar gráfico
+        plt.show()
+def graficar_seleccion_servidores(resultados):
+    """Grafica la cantidad de veces que cada servidor fue elegido"""
+    conteo = Counter(resultados)
 
-    # Comparar algoritmos
-    resultados = comparar_algoritmos(config, servidores)
+    plt.figure(figsize=(8, 5))
+    plt.bar(conteo.keys(), conteo.values(), color='blue', alpha=0.7)
+    plt.xlabel("ID del Servidor")
+    plt.ylabel("Frecuencia de Selección")
+    plt.title("Distribución Final de Selección de Servidores")
+    plt.xticks(list(conteo.keys()))
+    plt.show()
 
-    # Guardar resultados
-    with open("output_comparacion.json", "w") as file:
-        json.dump(resultados, file, indent=4)
+servidores = generar_servidores(10)
+selecciones = [seleccionar_mejor_servidor(servidores).id for _ in range(100)]
+graficar_seleccion_servidores(selecciones)
 
-    # Visualizar comparación
-    visualizar_comparacion(resultados)
-
-    # Simular escenarios y visualizar resultados
-    resultados_simulacion = simular_escenarios(config)
-    visualizar_resultados(resultados_simulacion)
-
-    # Generar diagrama de decisión
-    generar_diagrama_decision()
-
-    print("Comparación completada. Resultados guardados en 'output_comparacion.json'.")
+def guardar_resultados(resultados, json_path):
+    """Guarda los resultados en un archivo JSON"""
+    with open(json_path, "w", encoding="utf-8") as file:
+        json.dump(resultados, file, indent=4, ensure_ascii=False)
+    print(f"✅ Archivo guardado en: {json_path}")
 
 if __name__ == "__main__":
-    main()
+    if os.path.exists(json_path):
+        datos = cargar_datos(json_path)
+        graficar_resultados(datos)
+    else:
+        print(f"Error: No se encontró el archivo {json_path}")

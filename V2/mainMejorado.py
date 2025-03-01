@@ -3,7 +3,9 @@ import random
 import matplotlib.pyplot as plt
 import networkx as nx
 from collections import Counter
-
+import sys
+import io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 class Server:
     """Clase que representa un servidor con sus características clave"""
     
@@ -73,19 +75,27 @@ def simular_escenarios(config):
     for escenario in config["escenarios"]:
         iteraciones = config["iteraciones"]
         n_servidores = config["n_servidores"]
-        w1, w2, w3, w4 = escenario["pesos"]
+
+        pesos = escenario["pesos"]
+
+        # Asegurar que hay al menos 4 pesos y rellenar si es necesario
+        while len(pesos) < 4:
+            pesos.append(0.1)  # Agregamos valores pequeños para compensar
+
+        # Si hay más de 4, solo tomamos los primeros 4 para evitar el error
+        pesos = pesos[:4]
 
         mejores_servidores = []
         for _ in range(iteraciones):
             servidores = generar_servidores(n_servidores)
-            mejor = seleccionar_mejor_servidor(servidores, w1, w2, w3, w4)
+            mejor = max(servidores, key=lambda s: s.calcular_utilidad(*pesos))
             mejores_servidores.append(mejor.id)
-        
-        # Contar la frecuencia de selección de servidores
+
         conteo = dict(Counter(mejores_servidores))
         resultados[escenario["nombre"]] = conteo
-    
+
     return resultados
+
 
 def visualizar_resultados(resultados):
     """Grafica la frecuencia de selección de servidores para cada escenario"""
@@ -122,17 +132,50 @@ def generar_diagrama_decision():
     plt.title("Diagrama de Decisión para Selección de Servidores")
     plt.show()
 
-def tomar_decisiones_secuenciales(n_pasos, n_servidores, w1, w2, w3, w4):
-    """Simula un MDP donde los servidores ajustan su carga en cada iteración"""
+def tomar_decisiones_secuenciales(iteraciones, n_servidores, *pesos):
+    """Simula la toma de decisiones con tres métodos: Utilidad, Round-Robin y Least Connections"""
+    if len(pesos) < 4:
+        raise ValueError("Se requieren al menos 4 pesos para la toma de decisiones.")
+    
+    # Tomamos solo 4 pesos
+    pesos = pesos[:4]
+
+    # Contadores de servidores seleccionados en cada método
+    seleccion_utilidad = []
+    seleccion_round_robin = []
+    seleccion_least_connections = []
+
+    # Generar servidores
     servidores = generar_servidores(n_servidores)
 
-    for paso in range(n_pasos):
-        mejor = seleccionar_mejor_servidor(servidores, w1, w2, w3, w4)
-        print(f"Iteración {paso+1}: Servidor seleccionado -> {mejor.id}")
+    # Inicializar estado de conexiones para Least Connections
+    conexiones = {s.id: random.randint(1, 10) for s in servidores}
 
-        # Simulación de ajuste de carga en servidores
-        for server in servidores:
-            server.carga = min(1, server.carga + random.uniform(-0.2, 0.2))  # Simula cambio de carga
+    for i in range(iteraciones):
+        # Método de Utilidad
+        mejor_utilidad = max(servidores, key=lambda s: s.calcular_utilidad(*pesos))
+        seleccion_utilidad.append(mejor_utilidad.id)
+
+        # Método Round-Robin
+        mejor_round_robin = servidores[i % n_servidores]
+        seleccion_round_robin.append(mejor_round_robin.id)
+
+        # Método Least Connections
+        mejor_least_connections = min(conexiones, key=conexiones.get)
+        seleccion_least_connections.append(mejor_least_connections)
+        conexiones[mejor_least_connections] += 1  # Incrementar carga
+
+        print(f"Iteración {i+1}:")
+        print(f"  - Método Utilidad -> Servidor {mejor_utilidad.id}")
+        print(f"  - Método Round-Robin -> Servidor {mejor_round_robin.id}")
+        print(f"  - Método Least Connections -> Servidor {mejor_least_connections}")
+
+    # Devolver los resultados en un diccionario para su análisis
+    return {
+        "Utilidad": dict(Counter(seleccion_utilidad)),
+        "Round-Robin": dict(Counter(seleccion_round_robin)),
+        "Least Connections": dict(Counter(seleccion_least_connections))
+    }
 
 def main():
     # Leer archivo de entrada
@@ -157,6 +200,15 @@ def main():
     for escenario in config["escenarios"]:
         print(f"\nEscenario: {escenario['nombre']}")
         tomar_decisiones_secuenciales(5, config["n_servidores"], *escenario["pesos"])
+    
+    for escenario in config["escenarios"]:
+        print(f"\nEscenario: {escenario['nombre']}")
+    
+        resultados_metodos = tomar_decisiones_secuenciales(5, config["n_servidores"], *escenario["pesos"])
+
+        print("\n📊 Resultados finales:")
+    for metodo, resultado in resultados_metodos.items():
+        print(f"🔹 Método {metodo}: {resultado}")
 
 if __name__ == "__main__":
     main()

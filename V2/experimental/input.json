@@ -1,27 +1,53 @@
 {
     "n_servidores": 10,
     "iteraciones": 1000,
-    "distribucion": "beta",
+    "distribucion": "uniforme",
     "escenarios": [
         {
-        "nombre": "Balanceado",
-        "pesos": [0.3, 0.2, 0.3, 0.2]
+            "nombre": "Balanceado",
+            "pesos": [
+                0.2424156991829527,
+                0.24611376899649268,
+                0.25866569201642303,
+                0.25280483980413165
+            ]
         },
         {
-        "nombre": "Baja Latencia",
-        "pesos": [0.2, 0.1, 0.6, 0.1]
+            "nombre": "Baja Latencia",
+            "pesos": [
+                0.24744090591793266,
+                0.26673479782995113,
+                0.24005993513738266,
+                0.24576436111473357
+            ]
         },
         {
-        "nombre": "Alta Disponibilidad",
-            "pesos": [0.2, 0.2, 0.2, 0.4]
+            "nombre": "Alta Disponibilidad",
+            "pesos": [
+                0.21213780361090376,
+                0.18210537508303307,
+                0.209039994306002,
+                0.20971572928327242,
+                0.18700109771678874
+            ]
         },
         {
-        "nombre": "Costo Energético Bajo",
-        "pesos": [0.2, 0.2, 0.2, 0.2, 0.2]  
+            "nombre": "Costo Energ\u00e9tico Bajo",
+            "pesos": [
+                0.2582982214815244,
+                0.2664602630645185,
+                0.22567749703408882,
+                0.2495640184198683
+            ]
         },
         {
-        "nombre": "Alta Tolerancia a Fallos",
-        "pesos": [0.2, 0.2, 0.2, 0.2, 0.2, 0.2]
+            "nombre": "Alta Tolerancia a Fallos",
+            "pesos": [
+                0.24192420468246856,
+                0.23285176847617334,
+                0.2563549095860593,
+                0.2688691172552989
+            ]
         }
     ]
 }
