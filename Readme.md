@@ -56,7 +56,7 @@ pip install matplotlib networkx
 ---
 
 ## Estructura de Archivos
-- **`script.py`**: Contiene todo el código fuente principal.
+- **`mainComparacion.py`**: Contiene todo el código fuente principal.
 - **`input.json`**: Archivo de entrada para la configuración de escenarios.  
 - **`output_comparacion.json`**: Archivo de salida que se genera con los resultados de la comparación entre algoritmos.
 - **`grafico_{escenario}.png`**: Gráficas de frecuencia de selección de servidores para cada escenario.
