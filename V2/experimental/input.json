@@ -1,19 +1,27 @@
 {
-    "iteraciones": 2500,
-    "n_servidores": 20,
+    "n_servidores": 10,
+    "iteraciones": 1000,
+    "distribucion": "beta",
     "escenarios": [
         {
-            "nombre": "Balanceado",
-            "pesos": [0.4, 0.2, 0.3, 0.1]
-        }
-        ,
-        {
-            "nombre": "Baja Latencia",
-            "pesos": [0.2, 0.1, 0.6, 0.1]
+        "nombre": "Balanceado",
+        "pesos": [0.3, 0.2, 0.3, 0.2]
         },
         {
-            "nombre": "Alta Disponibilidad",
-            "pesos": [0.3, 0.1, 0.2, 0.4]
+        "nombre": "Baja Latencia",
+        "pesos": [0.2, 0.1, 0.6, 0.1]
+        },
+        {
+        "nombre": "Alta Disponibilidad",
+            "pesos": [0.2, 0.2, 0.2, 0.4]
+        },
+        {
+        "nombre": "Costo Energético Bajo",
+        "pesos": [0.2, 0.2, 0.2, 0.2, 0.2]  
+        },
+        {
+        "nombre": "Alta Tolerancia a Fallos",
+        "pesos": [0.2, 0.2, 0.2, 0.2, 0.2, 0.2]
         }
     ]
 }
