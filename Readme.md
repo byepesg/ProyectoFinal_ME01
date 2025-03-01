@@ -2,7 +2,10 @@
 
 - Brayan Sebastián Yepes García
 - Diana Marcela Bello López
-
+- Nicolás Daniel Hernández Venegas 
+- David Steven Poveda Taborda 
+- Héctor Hernando Alfonso Hernández 
+- Andrea Katerine Calderón García 
 python3 -m venv myenv
 
 source myenv/bin/activate
