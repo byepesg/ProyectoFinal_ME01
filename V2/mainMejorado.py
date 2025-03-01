@@ -176,6 +176,44 @@ def tomar_decisiones_secuenciales(iteraciones, n_servidores, *pesos):
         "Round-Robin": dict(Counter(seleccion_round_robin)),
         "Least Connections": dict(Counter(seleccion_least_connections))
     }
+import matplotlib.pyplot as plt
+import numpy as np
+
+def graficar_comparacion_metodos(resultados_metodos, escenario_nombre):
+    """Genera una gráfica comparativa de selección de servidores para cada método."""
+    
+    # Extraer los métodos y servidores involucrados
+    metodos = list(resultados_metodos.keys())  # ["Utilidad", "Round-Robin", "Least Connections"]
+    servidores = set()  # Conjunto para almacenar todos los servidores mencionados
+    
+    for metodo in metodos:
+        servidores.update(resultados_metodos[metodo].keys())
+
+    servidores = sorted(servidores)  # Ordenar servidores por ID
+    x = np.arange(len(servidores))  # Posiciones en X
+    
+    width = 0.25  # Ancho de cada barra
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    # Colores para cada método
+    colores = ["blue", "red", "green"]
+    
+    for i, metodo in enumerate(metodos):
+        valores = [resultados_metodos[metodo].get(s, 0) for s in servidores]
+        ax.bar(x + (i * width), valores, width, label=metodo, alpha=0.7, color=colores[i])
+    
+    # Configuración del gráfico
+    ax.set_xlabel("ID del Servidor")
+    ax.set_ylabel("Frecuencia de Selección")
+    ax.set_title(f"Comparación de Métodos - {escenario_nombre}")
+    ax.set_xticks(x + width)
+    ax.set_xticklabels(servidores)
+    ax.legend()
+    ax.grid(axis="y", linestyle="--", alpha=0.6)
+    
+    # Mostrar gráfico
+    plt.show()
+
 
 def main():
     # Leer archivo de entrada
@@ -205,6 +243,7 @@ def main():
         print(f"\nEscenario: {escenario['nombre']}")
     
         resultados_metodos = tomar_decisiones_secuenciales(5, config["n_servidores"], *escenario["pesos"])
+        graficar_comparacion_metodos(resultados_metodos, escenario["nombre"])
 
         print("\n📊 Resultados finales:")
     for metodo, resultado in resultados_metodos.items():
